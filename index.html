@@ -709,6 +709,27 @@
     .det-tag{left:10px;font-size:.59rem}
   }
 
+  /* ---- publications ------------------------------------------------
+     Three IEEE papers are the strongest thing on the page and they were
+     set at the same weight as everything else. On the lit key they read
+     as a reprint: a display numeral in the margin, the title at size,
+     and his own name picked out of the author list. */
+  section[data-key="lit"] ol.refs li{padding-left:3.4rem}
+  section[data-key="lit"] ol.refs li::before{
+    font-family:var(--f-display);font-size:1.6rem;font-weight:500;
+    color:var(--line-2);top:1.15rem;letter-spacing:-.02em}
+  section[data-key="lit"] ol.refs li:first-child::before{top:0}
+  section[data-key="lit"] ol.refs li:hover::before{color:var(--sig)}
+  section[data-key="lit"] .rt{font-size:1.32rem;line-height:1.26;margin-bottom:.55rem}
+  section[data-key="lit"] .ra b{color:var(--ink);font-weight:600}
+  section[data-key="lit"] .rm{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.02em;
+    text-transform:uppercase;color:var(--dim);line-height:1.6}
+  section[data-key="lit"] .rm em{font-style:normal}
+  @media(max-width:560px){
+    section[data-key="lit"] ol.refs li{padding-left:0}
+    section[data-key="lit"] ol.refs li::before{font-size:1.3rem}
+  }
+
   /* ---- i-Brick instrument -----------------------------------------
      The venture's whole argument is one number plus an admission that
      some conditions were never measured. Draw both. */
@@ -944,7 +965,7 @@
   </div>
 </section>
 
-<section id="research">
+<section id="research" data-key="lit">
   <div class="wrap sec">
     <div class="marker"><span class="fnum">FRAME 03</span><span class="fname">Research</span><div class="tick"></div></div>
     <div class="reveal">
@@ -1993,6 +2014,40 @@
     scrub.addEventListener('pointerup',stop);
     scrub.addEventListener('pointercancel',stop);
   }
+})();
+</script>
+
+<script>
+/* The masthead eyebrow resolves out of noise once, on load: a label
+   settling the way a readout settles. The real text is already in the
+   markup, so with JS off or reduced motion on, it is simply there. */
+(function(){
+  var el = document.querySelector('.masthead .eyebrow');
+  if(!el) return;
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  var text = el.textContent;
+  var noise = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&<>/\\=+*';
+  var settled = 0;                 // characters resolved so far
+  var frame = 0;
+  var PER_CHAR = 1.6;              // frames each character takes to settle
+
+  el.style.minHeight = el.offsetHeight + 'px';
+
+  function tick(){
+    var out = '';
+    for(var i = 0; i < text.length; i++){
+      var ch = text.charAt(i);
+      if(i < settled || ch === ' '){ out += ch; }
+      else { out += noise.charAt((Math.random() * noise.length) | 0); }
+    }
+    el.textContent = out;
+    frame++;
+    settled = Math.floor(frame / PER_CHAR);
+    if(settled <= text.length){ requestAnimationFrame(tick); }
+    else { el.textContent = text; el.style.minHeight = ''; }
+  }
+  setTimeout(function(){ requestAnimationFrame(tick); }, 240);
 })();
 </script>
 

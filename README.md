@@ -14,10 +14,19 @@ The v1 page ran roughly 8,500px in a single key: every section computed to
 to footer. v2 keeps the structure, the copy and the live detector, and changes
 how loudly the page speaks.
 
-- **Three section grounds.** `data-key="lit"` (bone) on About and Experience,
-  `data-key="flood"` (full-bleed amber) on Contact, used exactly once. Each key
-  only redefines the existing CSS custom properties, so every component inside
-  re-themes with no rules of its own.
+- **Three section grounds.** `data-key="lit"` (bone) on About, Research and
+  Experience; `data-key="flood"` (full-bleed amber) on Contact, used exactly
+  once. Each key only redefines the existing CSS custom properties, so every
+  component inside re-themes with no rules of its own.
+
+  The rule is semantic, not decorative: **lit is for documents** (the bio, the
+  papers, the CV) and **ground is for systems** (the venture, the live demo,
+  the project work, the tooling). That also gives the page its rhythm —
+  dark, lit, dark, lit, then a dark run through demo/work/skills, lit, flood.
+
+- **Publications set as a reprint.** On the lit key the three IEEE papers get a
+  display numeral in the margin, the title at 1.32rem, the venue stamped in
+  mono, and his own name picked out of the author list in `--ink`.
 - **Display scale.** `h1` moved from `clamp(2.75rem, 6vw, 4.5rem)` at `line-height: 1.01`
   to `clamp(2.9rem, 8.4vw, 6.6rem)` at `0.9`, and out of the two-column grid into
   its own full-measure row so it holds two lines instead of breaking into four.
@@ -30,8 +39,14 @@ how loudly the page speaks.
 - **i-Brick instrument.** The venture's 0–100 risk score as a dial, including the
   dashed `UNASSESSED` chip — the system's own refusal to report unmeasured as fine.
 - **One orchestrated opening.** The headline wipes up from a mask on load, as a
-  pure CSS animation so it can never be left invisible by a script failure.
-  Everything below keeps the existing `IntersectionObserver` fade-ups.
+  pure CSS animation so it can never be left invisible by a script failure, and
+  the eyebrow resolves out of noise once. Everything below keeps the existing
+  `IntersectionObserver` fade-ups. Both respect `prefers-reduced-motion`, and
+  the eyebrow's real text is in the markup, so with JS off it is simply there.
+
+The live detector stays at section 04 rather than moving into the masthead.
+The hero frame's boxes are hand-drawn and the demo says so — "The boxes on my
+portrait are drawn by hand. These aren't." Collapsing the two would cost that.
 
 Typeface is still self-hosted Newsreader. Fraunces was considered for the display
 role and is a drop-in swap (`--f-display`) if more character is wanted later.
