@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Few-shot object counter · Case study · Chandra Kiran Teja</title>
+<meta name="description" content="Case study: adding user-taught few-shot learning to an AI object counter by fine-tuning a ResNet-50 classifier head in seconds. M.Sc. AI Engineering Lab, Universität Passau.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230C0D0F'/%3E%3Crect x='22' y='22' width='56' height='56' fill='none' stroke='%23E2A33E' stroke-width='7'/%3E%3C/svg%3E">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Few-shot object counter · Case study">
+<meta property="og:description" content="Letting a user teach an object counter a new class from a handful of images, by fine-tuning only the classifier head.">
+<meta property="og:image" content="https://avatars.githubusercontent.com/u/91280385?v=4">
+<link rel="preload" href="fonts/ibm-plex-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  /* Self-hosted: no visitor IP reaches Google. Latin and Latin Extended only.
+     Newsreader and Plex Sans are variable, so one file covers their weight range. */
+  @font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/ibm-plex-mono-400-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+  @font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/ibm-plex-mono-400-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+  @font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/ibm-plex-mono-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+  @font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/ibm-plex-mono-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+  @font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400 600;font-display:swap;src:url(fonts/ibm-plex-sans-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+  @font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400 600;font-display:swap;src:url(fonts/ibm-plex-sans-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+  @font-face{font-family:'Newsreader';font-style:normal;font-weight:400 600;font-display:swap;src:url(fonts/newsreader-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+  @font-face{font-family:'Newsreader';font-style:normal;font-weight:400 600;font-display:swap;src:url(fonts/newsreader-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+  :root{
+    --ground:#0C0D0F;--panel:#171A20;--panel-2:#0F1114;--line:#272B33;--line-2:#373C46;
+    --ink:#EDEBE6;--body:#B8B6AF;--muted:#A49F94;--dim:#938B7C;--sig:#E2A33E;
+    --e-out:cubic-bezier(.16,1,.3,1);
+    --e-io:cubic-bezier(.65,0,.35,1);
+    --t1:140ms; --t2:280ms;
+    --maxw:900px;
+    --f-display:"Newsreader",Georgia,serif;
+    --f-body:"IBM Plex Sans",system-ui,sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+    color-scheme:dark;
+  }
+  /* Accent rule: --sig marks interactive and active things, plus mono system
+     labels (frame numbers, eyebrows). Data values and prose use --ink, so amber
+     text on this page reliably means "you can click or it is current". */
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;overflow-x:hidden;background:var(--ground);color:var(--body);font-family:var(--f-body);
+       font-size:17px;line-height:1.72;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:rgba(226,163,62,.16);color:var(--ink)}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding-left:34px;padding-right:34px}
+
+  nav{position:sticky;top:0;z-index:50;background:rgba(12,13,15,.9);backdrop-filter:blur(10px);
+      border-bottom:1px solid var(--line)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:64px;gap:1rem}
+  .mark{font-family:var(--f-display);font-size:1.04rem;font-weight:600;color:var(--ink)}
+  .back{font-family:var(--f-mono);font-size:.75rem;color:var(--muted);transition:color .18s}
+  .back:hover{color:var(--sig)}
+
+  header{padding:64px 0 44px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:var(--f-mono);font-size:.71rem;letter-spacing:.13em;text-transform:uppercase;
+           color:var(--sig);margin-bottom:1.3rem}
+  h1{font-family:var(--f-display);font-weight:500;font-size:clamp(2.1rem,5vw,3.2rem);line-height:1.08;
+     letter-spacing:-.02em;color:var(--ink);margin:0 0 1.2rem;text-wrap:balance}
+  .lede{font-size:1.12rem;max-width:60ch;margin:0}
+  .meta{display:grid;grid-template-columns:repeat(4,1fr);gap:1.4rem;margin-top:2.2rem;
+        padding-top:1.4rem;border-top:1px solid var(--line)}
+  .meta .k{font-family:var(--f-mono);font-size:.66rem;letter-spacing:.11em;text-transform:uppercase;
+           color:var(--dim);display:block;margin-bottom:.3rem}
+  .meta .v{font-size:.92rem;color:var(--ink)}
+  @media(max-width:700px){.meta{grid-template-columns:repeat(2,1fr);gap:1rem}}
+
+  section{padding:48px 0;border-bottom:1px solid var(--line)}
+  h2{font-family:var(--f-display);font-weight:500;font-size:1.6rem;letter-spacing:-.015em;
+     color:var(--ink);margin:0 0 1.1rem;text-wrap:balance}
+  h3{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
+     color:var(--sig);margin:2rem 0 .7rem;font-weight:400}
+  p{margin:0 0 1.1rem;max-width:66ch;text-wrap:pretty}
+  p:last-child{margin-bottom:0}
+  strong{color:var(--ink);font-weight:600}
+  code{font-family:var(--f-mono);font-size:.86em;color:var(--ink);background:var(--panel);
+       border:1px solid var(--line);border-radius:2px;padding:.05em .35em}
+  ul.pts{margin:0 0 1.1rem;padding:0;list-style:none;display:flex;flex-direction:column;gap:.55rem}
+  ul.pts li{padding-left:1.2rem;position:relative;max-width:66ch}
+  ul.pts li::before{content:"";position:absolute;left:0;top:.72em;width:5px;height:5px;background:var(--line-2)}
+
+  figure.arch{margin:1.6rem 0 0;border:1px solid var(--line);background:var(--panel-2);
+              padding:1.1rem 1.2rem;overflow-x:auto}
+  figure.arch svg{display:block;min-width:660px;width:100%;height:auto}
+  figure.arch figcaption{font-family:var(--f-mono);font-size:.68rem;color:var(--dim);
+                         letter-spacing:.05em;text-transform:uppercase;margin-top:.85rem}
+  .ab{fill:var(--panel);stroke:var(--line-2);stroke-width:1}
+  .ab-hi{fill:none;stroke:var(--sig);stroke-width:1.4}
+  .at{fill:#EDEBE6;font-family:"IBM Plex Sans",sans-serif;font-size:12.5px}
+  .at-s{fill:#A49F94;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em}
+  .at-a{fill:#E2A33E;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em}
+  .aln{stroke:var(--line-2);stroke-width:1.2;fill:none}
+  .aln-a{stroke:var(--sig);stroke-width:1.2;fill:none}
+
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--line);margin-top:1.2rem}
+  table{border-collapse:collapse;width:100%;min-width:520px;font-size:.9rem}
+  th{font-family:var(--f-mono);font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;
+     color:var(--dim);text-align:left;padding:.75rem .9rem;border-bottom:1px solid var(--line-2);font-weight:400}
+  td{padding:.78rem .9rem;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  td.m{font-family:var(--f-mono);color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.n{color:var(--ink)}
+
+  .cite-box{border:1px solid var(--line);background:var(--panel-2);padding:1.1rem 1.2rem;margin-top:1.2rem}
+  .cite-box p{font-size:.94rem;margin:0 0 .8rem}
+  .cite-box .venue{font-family:var(--f-mono);font-size:.72rem;color:var(--muted);letter-spacing:.05em}
+  .btn{display:inline-block;font-family:var(--f-mono);font-size:.77rem;padding:.62rem 1.05rem;
+       border-radius:2px;border:1px solid var(--line-2);color:var(--ink);background:transparent;
+       cursor:pointer;transition:border-color .18s,color .18s;margin-right:.5rem;margin-top:.5rem}
+  .btn:hover{border-color:var(--sig);color:var(--sig)}
+  .btn.solid{background:var(--sig);color:var(--ground);border-color:var(--sig)}
+  .btn.solid:hover{opacity:.86;color:var(--ground)}
+  .btn.done{border-color:var(--sig);color:var(--sig)}
+
+  .pager{display:flex;justify-content:space-between;gap:1rem;padding:34px 0;flex-wrap:wrap}
+  .pager a{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);transition:color .18s}
+  .pager a:hover{color:var(--sig)}
+  footer{padding:2.2rem 0 3rem;color:var(--dim);font-family:var(--f-mono);font-size:.73rem;
+         display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+  footer a{border-bottom:1px solid var(--line)}
+  footer a:hover{color:var(--sig);border-color:var(--sig)}
+  figure.arch,.tbl-wrap{max-width:100%}
+  img,canvas,svg{max-width:100%}
+  section{scroll-margin-top:72px}
+  @media(max-width:700px){
+    figure.arch::before,.tbl-wrap::before{
+      content:"↔ swipe";display:block;position:sticky;left:0;
+      font-family:var(--f-mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--dim);margin-bottom:.55rem}
+    .tbl-wrap::before{padding:.6rem .9rem 0}
+    .wrap{padding-left:20px;padding-right:20px}
+    header{padding:44px 0 34px}
+    section{padding:38px 0}
+    h1{font-size:2.1rem}
+    h2{font-size:1.4rem}
+    .lede{font-size:1.03rem}
+    .meta{grid-template-columns:1fr 1fr;gap:1rem;margin-top:1.7rem}
+    figure.arch svg{min-width:540px}
+    table{min-width:460px}
+    .btn{padding:.82rem 1.05rem;display:inline-block}
+    .pager{flex-direction:column;gap:.7rem}
+    footer{flex-direction:column;gap:.5rem}
+    /* WCAG 2.5.8: 24px hit area for small inline links, without moving them */
+    .back,.pager a,footer a{position:relative}
+    .back::after,.pager a::after,footer a::after{content:"";position:absolute;
+      left:0;right:0;top:calc(50% - 12px);height:24px}
+  }
+  @media(max-width:430px){
+    .wrap{padding-left:16px;padding-right:16px}
+    h1{font-size:1.85rem}
+    .meta{grid-template-columns:1fr}
+  }
+  html.js .fade{opacity:0;transform:translateY(12px)}
+  html.js.ready .fade{opacity:1;transform:none;
+    transition:opacity 600ms var(--e-out) var(--d,0ms),transform 600ms var(--e-out) var(--d,0ms)}
+  .btn:active{transform:translateY(1px)}
+  ul.pts li{transition:transform var(--t2) var(--e-out)}
+  ul.pts li:hover{transform:translateX(3px)}
+  tr:hover td{background:rgba(226,163,62,.045)}
+  @media(prefers-reduced-motion:reduce){
+    html.js .fade{opacity:1!important;transform:none!important;transition:none!important}
+    ul.pts li:hover,.btn:active{transform:none}
+  }
+  .skip{position:fixed;left:8px;top:-64px;z-index:100;background:var(--sig);color:var(--ground);
+        font-family:var(--f-mono);font-size:.78rem;padding:.62rem 1rem;border-radius:2px;transition:top .18s}
+  .skip:focus{top:8px}
+  @media(prefers-reduced-motion:reduce){.skip{transition:none}}
+  :focus-visible{outline:2px solid var(--sig);outline-offset:3px}
+  @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+  /* ================================================================
+     LIGHTING (sub-page): the same ambient source, grain, specular
+     edges and torch as the index, minus the parts that need frames.
+     These pages are one continuous read, so the source is fixed
+     rather than moving with a playhead, and there is no scrub bar.
+
+     Peak ambient alpha is capped at .055. At that cap --dim still
+     measures above 4.5:1 against the lit, grained ground.
+     ================================================================ */
+
+  .amb{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;
+    background-image:radial-gradient(130% 80% at 78% -4%,
+      rgba(226,163,62,.055) 0%,rgba(226,163,62,0) 64%)}
+  .amb .grain{position:absolute;inset:0;display:block;opacity:.028;
+    background-repeat:repeat;background-size:160px 160px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E")}
+
+  /* specular edges. Below 700px figure.arch and .tbl-wrap use ::before for
+     the "swipe" hint, so the edge only lights from 701px up. */
+  .frame,.cite-box{position:relative}
+  .frame::before,.cite-box::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;
+    pointer-events:none;
+    background:linear-gradient(90deg,rgba(237,235,230,0) 0%,rgba(237,235,230,.26) 16%,
+      rgba(237,235,230,.09) 52%,rgba(237,235,230,0) 92%)}
+  @media(min-width:701px){
+    figure.arch,.tbl-wrap{position:relative}
+    figure.arch::before,.tbl-wrap::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;
+      pointer-events:none;
+      background:linear-gradient(90deg,rgba(237,235,230,0) 0%,rgba(237,235,230,.24) 16%,
+        rgba(237,235,230,.08) 52%,rgba(237,235,230,0) 92%)}
+  }
+
+  /* torch: the cursor lights the schematic it is over */
+  @media(hover:hover) and (pointer:fine){
+    html.js figure.arch,html.js .cite-box{position:relative;isolation:isolate;--mx:50%;--my:50%}
+    html.js figure.arch::after,html.js .cite-box::after{
+      content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:0;
+      transition:opacity var(--t2,280ms) var(--e-io,cubic-bezier(.65,0,.35,1));
+      background:radial-gradient(220px 220px at var(--mx) var(--my),
+        rgba(226,163,62,.10) 0%,rgba(226,163,62,.03) 45%,rgba(226,163,62,0) 72%)}
+    html.js figure.arch:hover::after,html.js .cite-box:hover::after{opacity:1}
+    @supports ((mask-image:radial-gradient(#000,transparent)) or (-webkit-mask-image:radial-gradient(#000,transparent))){
+      html.js figure.arch::after,html.js .cite-box::after{
+        background:
+          linear-gradient(to right,rgba(226,163,62,.15) 0 1px,rgba(0,0,0,0) 1px 100%) 0 0/22px 22px,
+          linear-gradient(to bottom,rgba(226,163,62,.15) 0 1px,rgba(0,0,0,0) 1px 100%) 0 0/22px 22px,
+          radial-gradient(220px 220px at var(--mx) var(--my),
+            rgba(226,163,62,.11) 0%,rgba(226,163,62,.03) 48%,rgba(226,163,62,0) 74%);
+        -webkit-mask-image:radial-gradient(200px 200px at var(--mx) var(--my),
+          #000 0%,rgba(0,0,0,.4) 46%,rgba(0,0,0,0) 70%);
+        mask-image:radial-gradient(200px 200px at var(--mx) var(--my),
+          #000 0%,rgba(0,0,0,.4) 46%,rgba(0,0,0,0) 70%)}
+    }
+  }
+
+  @media(prefers-reduced-motion:reduce){
+    figure.arch::after,.cite-box::after{display:none}
+  }
+  @media print{
+    .amb{display:none!important}
+    .frame::before,.cite-box::before,figure.arch::before,.tbl-wrap::before,
+    figure.arch::after,.cite-box::after{display:none!important}
+  }
+</style>
+<script>document.documentElement.className+=' js';</script>
+</head>
+<body>
+<div class="amb" aria-hidden="true"><span class="grain"></span></div>
+<a class="skip" href="#main">Skip to content</a>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="mark" href="index.html">Chandra Kiran Teja</a>
+    <a class="back" href="index.html#work">← Back to selected work</a>
+  </div>
+</nav>
+
+<main id="main">
+<header>
+  <div class="wrap">
+    <div class="eyebrow fade" style="--d:40ms">Case study · Frame 04.2</div>
+    <h1 class="fade" style="--d:110ms">Teaching a model a new object in seconds.</h1>
+    <p class="lede fade" style="--d:190ms">A few-shot learning pipeline added to an AI object counter, so a user can name a class the model has never seen, upload a handful of examples in the browser, and have the counting pipeline recognise it straight away.</p>
+    <div class="meta fade" style="--d:260ms">
+      <div><span class="k">Context</span><span class="v">M.Sc. AI Engineering Lab</span></div>
+      <div><span class="k">Base model</span><span class="v">ResNet-50</span></div>
+      <div><span class="k">Method</span><span class="v">Transfer learning</span></div>
+      <div><span class="k">Taught from</span><span class="v">5 to 10 images</span></div>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>The problem</h2>
+    <p>The object counter worked, but its knowledge was fixed at build time. It could only count things that were already in its class list, which meant the answer to most real requests was no. Someone who wanted to count a specific product, a <strong>coffee mug</strong> say, was out of luck unless a coffee mug happened to be one of the original categories.</p>
+    <p>The obvious fix, retraining the network on an expanded class set, is the wrong shape for the problem. It needs a large labelled dataset the user does not have, and hours of compute for a request that should feel instant. It also puts a machine learning engineer in the middle of every new class, which defeats the point of shipping the tool to anyone else.</p>
+    <p>So the question became: <strong>can the user teach the model themselves, from a handful of images, without retraining the network and without waiting?</strong></p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>The approach</h2>
+    <p>The whole design rests on one observation: a pretrained ResNet-50 already knows how to see. What it does not know is the name of your object. Those are different problems, and only the second one needs new training. ResNet-50 was chosen for its balance of accuracy against resource cost, which matters when training runs on demand rather than overnight.</p>
+
+    <h3>1. Freeze what already works</h3>
+    <p>Every convolutional layer has <code>requires_grad</code> set to <code>False</code> before anything else happens. The general visual features learned from ImageNet are exactly what makes learning from five images possible at all, and leaving them trainable on a tiny user-supplied set is how you get <strong>catastrophic forgetting</strong>: the model trades everything it knew for the one thing you just showed it.</p>
+
+    <h3>2. Grow the classifier head by one neuron</h3>
+    <p>ResNet-50 ends in a classifier sized for ImageNet's 1,000 classes. The implementation reads the input feature size off that final linear layer, builds a new one with <strong>exactly one more output neuron</strong>, then copies the original weights and biases across before swapping it in. The copy is the important part. Without it, adding a class would silently reset every class that came before.</p>
+
+    <h3>3. Prepare the user's images the way the model expects</h3>
+    <p>A custom PyTorch dataset loads the uploaded files, resizes them to <strong>224 by 224</strong>, and normalises with the same mean and standard deviation used in the original pretraining. This is unglamorous and it is also where this kind of feature usually breaks: feed a pretrained backbone differently normalised pixels and it will quietly underperform rather than fail loudly.</p>
+
+    <h3>4. Train only the head</h3>
+    <p>A short loop, roughly <strong>ten epochs</strong>, driven by a DataLoader with AdamW and cross-entropy loss. Only the new head's parameters carry gradients. Because the frozen backbone does all the heavy lifting and the trainable surface is a single layer, the model learns a new concept in seconds rather than the hours a full retrain would cost.</p>
+
+    <figure class="arch">
+      <svg viewBox="0 0 880 210" role="img" aria-label="A handful of user images are resized to 224 by 224 and normalised, then passed through a ResNet-50 whose convolutional layers are frozen. Only a new classifier head, one neuron larger than the original and carrying copied weights, is trained. The updated model feeds the counting pipeline, which produces the final label. A Grafana monitoring sidecar collects user corrections from the pipeline.">
+        <rect class="ab" x="8" y="62" width="120" height="56" rx="2"></rect>
+        <text class="at" x="20" y="88">User images</text>
+        <text class="at-s" x="20" y="105">5 TO 10 IMAGES</text>
+        <path class="aln" d="M128 90 H150"></path>
+        <path class="aln" d="M144 86 l6 4 -6 4"></path>
+
+        <rect class="ab" x="152" y="62" width="124" height="56" rx="2"></rect>
+        <text class="at" x="164" y="88">Dataset</text>
+        <text class="at-s" x="164" y="105">224 · NORMALISE</text>
+        <path class="aln" d="M276 90 H298"></path>
+        <path class="aln" d="M292 86 l6 4 -6 4"></path>
+
+        <rect class="ab" x="300" y="48" width="146" height="84" rx="2"></rect>
+        <text class="at" x="312" y="80">ResNet-50</text>
+        <text class="at-s" x="312" y="97">CONV FROZEN</text>
+        <text class="at-s" x="312" y="112">NO GRADIENTS</text>
+        <path class="aln-a" d="M446 90 H468"></path>
+        <path class="aln-a" d="M462 86 l6 4 -6 4"></path>
+
+        <rect class="ab-hi" x="470" y="48" width="150" height="84" rx="2"></rect>
+        <text class="at" x="482" y="80">New head</text>
+        <text class="at-a" x="482" y="97">+1 NEURON</text>
+        <text class="at-a" x="482" y="112">WEIGHTS COPIED</text>
+        <path class="aln" d="M620 90 H642"></path>
+        <path class="aln" d="M636 86 l6 4 -6 4"></path>
+
+        <rect class="ab" x="644" y="62" width="124" height="56" rx="2"></rect>
+        <text class="at" x="656" y="88">Counting</text>
+        <text class="at-s" x="656" y="105">PIPELINE</text>
+        <path class="aln" d="M768 90 H790"></path>
+        <path class="aln" d="M784 86 l6 4 -6 4"></path>
+
+        <rect class="ab" x="792" y="62" width="80" height="56" rx="2"></rect>
+        <text class="at" x="806" y="94">Label</text>
+
+        <path class="aln" stroke-dasharray="3 4" d="M706 118 V172 H584"></path>
+        <rect class="ab" x="334" y="156" width="250" height="32" rx="2"></rect>
+        <text class="at-s" x="348" y="176">GRAFANA · USER CORRECTIONS</text>
+        <text class="at-a" x="8" y="24">ONLY THE HIGHLIGHTED LAYER IS TRAINED</text>
+      </svg>
+      <figcaption>Few-shot pipeline: a frozen backbone, a classifier head one neuron wider, and a monitoring loop fed by user corrections</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Making it a feature rather than a script</h2>
+    <p>A fine-tuning function is not a product. Most of the work was turning it into something a person could use without being told how it worked, which meant restructuring the backend and rebuilding the interface around the training loop.</p>
+
+    <h3>Backend, split by responsibility</h3>
+    <ul class="pts">
+      <li><code>ai_models.py</code> loads the core models into memory once at startup.</li>
+      <li><code>few_shot_trainer.py</code> holds all the PyTorch fine-tuning logic.</li>
+      <li><code>ai_pipeline.py</code> was refactored down to inference only.</li>
+    </ul>
+    <p>Two endpoints connect the frontend to it: <code>POST /api/train</code> takes the new class name and its images and runs the training, and <code>GET /api/labels</code> returns the current class list so the interface always reflects what the model actually knows.</p>
+
+    <h3>Keeping the interface honest about the model's state</h3>
+    <p>A <code>CUSTOM_LABELS</code> set tracks classes added at runtime, and the labels endpoint serves the union of that set and the base labels. It is a small mechanism, but it is what stops the dropdown and the model from drifting apart, which is the usual failure mode for features that mutate a model while the app is running. User-supplied training images are written to a <code>training_data/</code> directory organised by class name, so there is a record of what the model was taught and a starting point for retraining later.</p>
+
+    <h3>A teaching loop that closes</h3>
+    <p>The interface got a dedicated <strong>Teach AI</strong> tab, deliberately separated from ordinary counting so the advanced path does not clutter the simple one. It walks through three steps, naming the object, uploading examples with visual previews, and starting the training, with a spinner and status messages while the model trains. When it finishes, the dropdown in the counting tab updates immediately with the new class. That last detail is the one that makes the feature feel real: the user's action visibly changes what the tool can do, straight away, with no reload and no explanation needed.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>How do you evaluate a class that did not exist an hour ago?</h2>
+    <p>This is the genuinely awkward part, and worth stating plainly rather than hiding behind a number. There is no held-out labelled test set for a category a user invented five minutes ago, so conventional test metrics are not available at training time.</p>
+    <p>Qualitatively, the loop works: given five to ten clear examples of a new object, a stapler in testing, the counting pipeline identifies and counts it in images it has not seen, and the zero-shot classifier at the end of the pipeline maps the newly fine-tuned classification onto the correct final label. The adaptation propagates through the whole pipeline, not just the layer that was trained.</p>
+    <p>Quantitatively, the answer was to move measurement out of training and into production. A Grafana dashboard reads a user correction mechanism, which turns everyday usage into labels and makes the standard classification metrics computable on real traffic:</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Metric</th><th>Question it answers</th><th>Why it matters here</th></tr></thead>
+        <tbody>
+          <tr><td class="n">Accuracy</td><td>What share of counts were correct?</td><td>Useful headline, but misleading when images hold few objects</td></tr>
+          <tr><td class="n">Precision</td><td>Of the objects claimed, how many were real?</td><td>Catches over-counting and false alarms</td></tr>
+          <tr><td class="n">Recall</td><td>Of the objects present, how many were found?</td><td>Catches under-counting and misses</td></tr>
+          <tr><td class="n">F1</td><td>Balance of the two</td><td>Single number for comparing pipeline versions</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>The part I find most useful is the <strong>pipeline version filter</strong>. Because metrics are tagged by version, the dashboard can compare the model before and after a new class was taught. A drop on the original classes after training is the visible signature of catastrophic forgetting, so the design decision from step one has an ongoing test rather than just an argument behind it.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>What this design costs</h2>
+    <ul class="pts">
+      <li><strong>Garbage in, garbage out, and the user holds the bag.</strong> Performance on a new class depends entirely on the quality, quantity and consistency of the images someone uploads. Blurry, occluded, or unrepresentative examples produce a confidently wrong class, and the person best placed to cause that problem is the same person least equipped to diagnose it.</li>
+      <li><strong>Training is stateful and in memory.</strong> The fine-tuned model exists in the running server's memory and is never written to disk. Restart the application and every taught class is gone. This is the single largest gap between this and something deployable, and the fix is known: persist the state dict and load it on startup.</li>
+      <li><strong>One neuron per class does not scale.</strong> Widening the final layer works cleanly for a handful of custom objects. At hundreds it bloats the model and forces a retrain of the head against all custom data each time. A scalable version would compare embeddings instead, something like CLIP matching image embeddings against text embeddings, which adds classes without changing the architecture.</li>
+      <li><strong>New classes are structurally more fragile than old ones.</strong> Original classes were learned from ImageNet's diversity. A taught class rests on one person's small and possibly biased sample. Freezing the backbone limits the blast radius, but degradation on visually similar original classes is still possible, which is precisely why the monitoring comparison exists.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>What I would do next</h2>
+    <p>Two changes would move this from a working prototype toward something I would be willing to run for other people. Persisting the fine-tuned weights after training and reloading them at startup is the immediate one, and it is small. Replacing the grow-the-head approach with an embedding similarity architecture is the larger one, and it is what would let the tool hold hundreds of user-defined classes instead of a handful.</p>
+    <p>The broader lesson I took from it: the machine learning here is roughly forty lines. Everything that made it usable, the module boundaries, the label synchronisation, the correction loop feeding monitoring, and the three-step interface that closes visibly, was the other ninety percent of the work.</p>
+  </div>
+</section>
+
+</main>
+
+<div class="wrap pager">
+  <a href="densenet-transformer.html">← Previous case study: DenseNet-Transformer</a>
+  <a href="edge-detection.html">Next case study: Edge deployment →</a>
+</div>
+
+<div class="wrap"><footer>
+  <span>© 2026 Chandra Kiran Teja</span>
+  <span>
+    <a href="https://www.linkedin.com/in/chandrakiranteja/" target="_blank" rel="noopener">LinkedIn</a> ·
+    <a href="https://github.com/ckteja" target="_blank" rel="noopener">GitHub</a> ·
+    <a href="mailto:chandrakiranteja@gmail.com">Email</a>
+  </span>
+</footer></div>
+
+<script>
+(function(){function s(){document.documentElement.classList.add('ready');}
+if(document.readyState==='complete')requestAnimationFrame(s);
+else window.addEventListener('load',function(){requestAnimationFrame(s);});
+})();
+</script>
+<script>
+/* ---- architecture diagrams draw themselves once, left to right, on first view ---- */
+(function(){
+  var svgs=[].slice.call(document.querySelectorAll('figure.arch svg'));
+  if(!svgs.length) return;
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* if we cannot animate safely, leave the finished diagram exactly as it is */
+  if(reduce||!('IntersectionObserver' in window)) return;
+
+  var E_IO='cubic-bezier(.65,0,.35,1)', E_OUT='cubic-bezier(.16,1,.3,1)', SPAN=820;
+
+  function prep(svg){
+    var vb=(svg.getAttribute('viewBox')||'').split(/[\s,]+/).map(Number);
+    var W=vb[2]>0?vb[2]:880, parts=[];
+    [].slice.call(svg.querySelectorAll('rect,text,path,line,circle,polygon')).forEach(function(el){
+      var bb; try{ bb=el.getBBox(); }catch(e){ return; }
+      /* a path that already carries a dash pattern would lose it if we drew it */
+      var drawable=(el.tagName==='path'||el.tagName==='line')&&!el.hasAttribute('stroke-dasharray');
+      var len=0;
+      if(drawable&&el.getTotalLength){ try{ len=el.getTotalLength(); }catch(e){ len=0; } }
+      var d=Math.round((Math.max(0,bb.x)/W)*SPAN);
+      if(len>0){
+        el.style.strokeDasharray=len+'px';
+        el.style.strokeDashoffset=len+'px';
+        el.style.transition='stroke-dashoffset 420ms '+E_IO+' '+d+'ms';
+        parts.push({el:el,draw:true});
+      }else{
+        el.style.opacity='0';
+        el.style.transition='opacity 380ms '+E_OUT+' '+(d+90)+'ms';
+        parts.push({el:el,draw:false});
+      }
+    });
+    svg.__play=function(){
+      parts.forEach(function(p){
+        if(p.draw) p.el.style.strokeDashoffset='0px';
+        else p.el.style.opacity='1';
+      });
+    };
+  }
+
+  var io=new IntersectionObserver(function(en){
+    en.forEach(function(e){
+      if(!e.isIntersecting) return;
+      io.unobserve(e.target);
+      if(e.target.__play) e.target.__play();
+    });
+  },{threshold:.15});
+
+  svgs.forEach(function(s){ prep(s); io.observe(s); });
+})();
+</script>
+<script>
+/* ---- analytics: cookieless, no personal data, no consent banner needed ----
+   Set CODE to your GoatCounter code and nothing else needs changing. While it
+   is empty this script loads nothing and makes no network request at all. */
+(function(){
+  var CODE = 'ckteja';   /* e.g. 'ckteja' for https://ckteja.goatcounter.com */
+  if(!CODE) return;
+
+  var s=document.createElement('script');
+  s.async=true;
+  s.src='https://gc.zgo.at/count.js';
+  s.setAttribute('data-goatcounter','https://'+CODE+'.goatcounter.com/count');
+  document.body.appendChild(s);
+
+  function ev(path,title){
+    if(window.goatcounter&&window.goatcounter.count)
+      window.goatcounter.count({path:path,title:title,event:true});
+  }
+  /* the three signals worth knowing about on a portfolio: did they take the CV,
+     did they actually run the demo, and where did they go next */
+  document.addEventListener('click',function(e){
+    var el=e.target&&e.target.closest?e.target.closest('a[href],button'):null;
+    if(!el) return;
+    if(el.id==='dmRun'||el.id==='dmCam'||el.id==='dmPick') return ev('demo-run','Live demo used');
+    var href=el.getAttribute('href')||'';
+    if(/\.pdf($|\?|#)/i.test(href)) return ev('cv-download','CV download');
+    if(/^https?:\/\//i.test(href)){
+      try{
+        var h=new URL(href,location.href).hostname.replace(/^www\./,'');
+        if(h!==location.hostname) ev('out-'+h,'Outbound: '+h);
+      }catch(err){}
+    }
+  },true);
+})();
+</script>
+<script>
+/* ---- torch: the cursor lights the schematic it is over ---- */
+(function(){
+  if(!window.matchMedia) return;
+  if(!matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var cards=[].slice.call(document.querySelectorAll('figure.arch,.cite-box'));
+  if(!cards.length) return;
+  var want=null,raf=null;
+  function paint(){
+    raf=null;
+    if(!want) return;
+    want.el.style.setProperty('--mx',want.x+'px');
+    want.el.style.setProperty('--my',want.y+'px');
+    want=null;
+  }
+  cards.forEach(function(el){
+    el.addEventListener('pointermove',function(e){
+      if(e.pointerType&&e.pointerType!=='mouse') return;
+      var r=el.getBoundingClientRect();
+      want={el:el,x:Math.round(e.clientX-r.left),y:Math.round(e.clientY-r.top)};
+      if(!raf) raf=requestAnimationFrame(paint);
+    },{passive:true});
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+# Chandra Kiran Teja: AI Engineer Portfolio (v2)
+
+Personal portfolio site: computer vision, deep learning, and real-time video understanding.
+
+Single-page, self-contained (`index.html`), no build step and no dependencies.
+Fonts are self-hosted, so no visitor IP reaches a third party.
+
+**v1 (currently live):** https://ckteja.github.io/Portfolio/ — source in `../website`, untouched.
+
+## What changed in v2
+
+The v1 page ran roughly 8,500px in a single key: every section computed to
+`background: rgba(0,0,0,0)`, so the whole document was `#0C0D0F` from masthead
+to footer. v2 keeps the structure, the copy and the live detector, and changes
+how loudly the page speaks.
+
+- **Three section grounds.** `data-key="lit"` (bone) on About and Experience,
+  `data-key="flood"` (full-bleed amber) on Contact, used exactly once. Each key
+  only redefines the existing CSS custom properties, so every component inside
+  re-themes with no rules of its own.
+- **Display scale.** `h1` moved from `clamp(2.75rem, 6vw, 4.5rem)` at `line-height: 1.01`
+  to `clamp(2.9rem, 8.4vw, 6.6rem)` at `0.9`, and out of the two-column grid into
+  its own full-measure row so it holds two lines instead of breaking into four.
+  Emphasis is set in italic amber (`h1 em`).
+- **Proof first.** The three figures (3× IEEE, 90% on Jetson Nano, M.Sc. Passau)
+  are set in display type rather than 13px mono.
+- **Projects as detections.** Each `.proj` is drawn as a bounding box with corner
+  ticks and a class-label tab carrying a real figure, the way his own models draw
+  them. Labels encode the kind of work: `FULL-STACK`, `RESEARCH`, `EDGE-DEPLOY`.
+- **i-Brick instrument.** The venture's 0–100 risk score as a dial, including the
+  dashed `UNASSESSED` chip — the system's own refusal to report unmeasured as fine.
+- **One orchestrated opening.** The headline wipes up from a mask on load, as a
+  pure CSS animation so it can never be left invisible by a script failure.
+  Everything below keeps the existing `IntersectionObserver` fade-ups.
+
+Typeface is still self-hosted Newsreader. Fraunces was considered for the display
+role and is a drop-in swap (`--f-display`) if more character is wanted later.
+
+## Local preview
+
+Open `index.html` directly, or serve it so the scripts run:
+
+```
+python -m http.server 8787
+```
+
+## Deploying
+
+`.github/workflows/static.yml` publishes the repository root to GitHub Pages on
+push to `main`. It is carried over from v1 and will deploy wherever this repo is
+pointed — check the remote before pushing.

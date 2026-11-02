@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Edge deployment · Case study · Chandra Kiran Teja</title>
+<meta name="description" content="Case study: deploying a YOLOv5 wildlife detector to an Nvidia Jetson Nano. Custom dataset collection, 15+ classes, 90% accuracy inside a 4 GB memory budget.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230C0D0F'/%3E%3Crect x='22' y='22' width='56' height='56' fill='none' stroke='%23E2A33E' stroke-width='7'/%3E%3C/svg%3E">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Edge deployment · Case study">
+<meta property="og:description" content="A YOLOv5 wildlife detector running in real time on an Nvidia Jetson Nano.">
+<meta property="og:image" content="https://avatars.githubusercontent.com/u/91280385?v=4">
+<link rel="preload" href="fonts/ibm-plex-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  /* Self-hosted: no visitor IP reaches Google. Latin and Latin Extended only.
+     Newsreader and Plex Sans are variable, so one file covers their weight range. */
+  @font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/ibm-plex-mono-400-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+  @font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/ibm-plex-mono-400-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+  @font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/ibm-plex-mono-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+  @font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/ibm-plex-mono-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+  @font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400 600;font-display:swap;src:url(fonts/ibm-plex-sans-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+  @font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:400 600;font-display:swap;src:url(fonts/ibm-plex-sans-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+  @font-face{font-family:'Newsreader';font-style:normal;font-weight:400 600;font-display:swap;src:url(fonts/newsreader-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+  @font-face{font-family:'Newsreader';font-style:normal;font-weight:400 600;font-display:swap;src:url(fonts/newsreader-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+  :root{
+    --ground:#0C0D0F;--panel:#171A20;--panel-2:#0F1114;--line:#272B33;--line-2:#373C46;
+    --ink:#EDEBE6;--body:#B8B6AF;--muted:#A49F94;--dim:#938B7C;--sig:#E2A33E;
+    --e-out:cubic-bezier(.16,1,.3,1);
+    --e-io:cubic-bezier(.65,0,.35,1);
+    --t1:140ms; --t2:280ms;
+    --maxw:900px;
+    --f-display:"Newsreader",Georgia,serif;
+    --f-body:"IBM Plex Sans",system-ui,sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+    color-scheme:dark;
+  }
+  /* Accent rule: --sig marks interactive and active things, plus mono system
+     labels (frame numbers, eyebrows). Data values and prose use --ink, so amber
+     text on this page reliably means "you can click or it is current". */
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;overflow-x:hidden;background:var(--ground);color:var(--body);font-family:var(--f-body);
+       font-size:17px;line-height:1.72;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  ::selection{background:rgba(226,163,62,.16);color:var(--ink)}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding-left:34px;padding-right:34px}
+
+  nav{position:sticky;top:0;z-index:50;background:rgba(12,13,15,.9);backdrop-filter:blur(10px);
+      border-bottom:1px solid var(--line)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:64px;gap:1rem}
+  .mark{font-family:var(--f-display);font-size:1.04rem;font-weight:600;color:var(--ink)}
+  .back{font-family:var(--f-mono);font-size:.75rem;color:var(--muted);transition:color .18s}
+  .back:hover{color:var(--sig)}
+
+  header{padding:64px 0 44px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-family:var(--f-mono);font-size:.71rem;letter-spacing:.13em;text-transform:uppercase;
+           color:var(--sig);margin-bottom:1.3rem}
+  h1{font-family:var(--f-display);font-weight:500;font-size:clamp(2.1rem,5vw,3.2rem);line-height:1.08;
+     letter-spacing:-.02em;color:var(--ink);margin:0 0 1.2rem;text-wrap:balance}
+  .lede{font-size:1.12rem;max-width:60ch;margin:0}
+  .meta{display:grid;grid-template-columns:repeat(4,1fr);gap:1.4rem;margin-top:2.2rem;
+        padding-top:1.4rem;border-top:1px solid var(--line)}
+  .meta .k{font-family:var(--f-mono);font-size:.66rem;letter-spacing:.11em;text-transform:uppercase;
+           color:var(--dim);display:block;margin-bottom:.3rem}
+  .meta .v{font-size:.92rem;color:var(--ink)}
+  @media(max-width:700px){.meta{grid-template-columns:repeat(2,1fr);gap:1rem}}
+
+  section{padding:48px 0;border-bottom:1px solid var(--line)}
+  h2{font-family:var(--f-display);font-weight:500;font-size:1.6rem;letter-spacing:-.015em;
+     color:var(--ink);margin:0 0 1.1rem;text-wrap:balance}
+  h3{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;
+     color:var(--sig);margin:2rem 0 .7rem;font-weight:400}
+  p{margin:0 0 1.1rem;max-width:66ch;text-wrap:pretty}
+  p:last-child{margin-bottom:0}
+  strong{color:var(--ink);font-weight:600}
+  ul.pts{margin:0 0 1.1rem;padding:0;list-style:none;display:flex;flex-direction:column;gap:.55rem}
+  ul.pts li{padding-left:1.2rem;position:relative;max-width:66ch}
+  ul.pts li::before{content:"";position:absolute;left:0;top:.72em;width:5px;height:5px;background:var(--line-2)}
+
+  figure.arch{margin:1.6rem 0 0;border:1px solid var(--line);background:var(--panel-2);
+              padding:1.1rem 1.2rem;overflow-x:auto}
+  figure.arch svg{display:block;min-width:640px;width:100%;height:auto}
+  figure.arch figcaption{font-family:var(--f-mono);font-size:.68rem;color:var(--dim);
+                         letter-spacing:.05em;text-transform:uppercase;margin-top:.85rem}
+  .ab{fill:var(--panel);stroke:var(--line-2);stroke-width:1}
+  .ab-hi{fill:none;stroke:var(--sig);stroke-width:1.4}
+  .at{fill:#EDEBE6;font-family:"IBM Plex Sans",sans-serif;font-size:12.5px}
+  .at-s{fill:#A49F94;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em}
+  .at-a{fill:#E2A33E;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em}
+  .aln{stroke:var(--line-2);stroke-width:1.2;fill:none}
+  .aln-a{stroke:var(--sig);stroke-width:1.2;fill:none}
+
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--line);margin-top:1.2rem}
+  table{border-collapse:collapse;width:100%;min-width:520px;font-size:.9rem}
+  th{font-family:var(--f-mono);font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;
+     color:var(--dim);text-align:left;padding:.75rem .9rem;border-bottom:1px solid var(--line-2);font-weight:400}
+  td{padding:.78rem .9rem;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  td.m{font-family:var(--f-mono);color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.n{color:var(--ink)}
+
+  .btn{display:inline-block;font-family:var(--f-mono);font-size:.77rem;padding:.62rem 1.05rem;
+       border-radius:2px;border:1px solid var(--line-2);color:var(--ink);background:transparent;
+       cursor:pointer;transition:border-color .18s,color .18s;margin-right:.5rem;margin-top:.5rem}
+  .btn:hover{border-color:var(--sig);color:var(--sig)}
+
+  .pager{display:flex;justify-content:space-between;gap:1rem;padding:34px 0;flex-wrap:wrap}
+  .pager a{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);transition:color .18s}
+  .pager a:hover{color:var(--sig)}
+  footer{padding:2.2rem 0 3rem;color:var(--dim);font-family:var(--f-mono);font-size:.73rem;
+         display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+  footer a{border-bottom:1px solid var(--line)}
+  footer a:hover{color:var(--sig);border-color:var(--sig)}
+  figure.arch,.tbl-wrap{max-width:100%}
+  img,canvas,svg{max-width:100%}
+  section{scroll-margin-top:72px}
+  @media(max-width:700px){
+    figure.arch::before,.tbl-wrap::before{
+      content:"↔ swipe";display:block;position:sticky;left:0;
+      font-family:var(--f-mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--dim);margin-bottom:.55rem}
+    .tbl-wrap::before{padding:.6rem .9rem 0}
+    .wrap{padding-left:20px;padding-right:20px}
+    header{padding:44px 0 34px}
+    section{padding:38px 0}
+    h1{font-size:2.1rem}
+    h2{font-size:1.4rem}
+    .lede{font-size:1.03rem}
+    .meta{grid-template-columns:1fr 1fr;gap:1rem;margin-top:1.7rem}
+    figure.arch svg{min-width:540px}
+    table{min-width:460px}
+    .btn{padding:.82rem 1.05rem;display:inline-block}
+    .pager{flex-direction:column;gap:.7rem}
+    footer{flex-direction:column;gap:.5rem}
+    /* WCAG 2.5.8: 24px hit area for small inline links, without moving them */
+    .back,.pager a,footer a{position:relative}
+    .back::after,.pager a::after,footer a::after{content:"";position:absolute;
+      left:0;right:0;top:calc(50% - 12px);height:24px}
+  }
+  @media(max-width:430px){
+    .wrap{padding-left:16px;padding-right:16px}
+    h1{font-size:1.85rem}
+    .meta{grid-template-columns:1fr}
+  }
+  html.js .fade{opacity:0;transform:translateY(12px)}
+  html.js.ready .fade{opacity:1;transform:none;
+    transition:opacity 600ms var(--e-out) var(--d,0ms),transform 600ms var(--e-out) var(--d,0ms)}
+  .btn:active{transform:translateY(1px)}
+  ul.pts li{transition:transform var(--t2) var(--e-out)}
+  ul.pts li:hover{transform:translateX(3px)}
+  tr:hover td{background:rgba(226,163,62,.045)}
+  @media(prefers-reduced-motion:reduce){
+    html.js .fade{opacity:1!important;transform:none!important;transition:none!important}
+    ul.pts li:hover,.btn:active{transform:none}
+  }
+  .skip{position:fixed;left:8px;top:-64px;z-index:100;background:var(--sig);color:var(--ground);
+        font-family:var(--f-mono);font-size:.78rem;padding:.62rem 1rem;border-radius:2px;transition:top .18s}
+  .skip:focus{top:8px}
+  @media(prefers-reduced-motion:reduce){.skip{transition:none}}
+  :focus-visible{outline:2px solid var(--sig);outline-offset:3px}
+  @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+  /* ================================================================
+     LIGHTING (sub-page): the same ambient source, grain, specular
+     edges and torch as the index, minus the parts that need frames.
+     These pages are one continuous read, so the source is fixed
+     rather than moving with a playhead, and there is no scrub bar.
+
+     Peak ambient alpha is capped at .055. At that cap --dim still
+     measures above 4.5:1 against the lit, grained ground.
+     ================================================================ */
+
+  .amb{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;
+    background-image:radial-gradient(130% 80% at 78% -4%,
+      rgba(226,163,62,.055) 0%,rgba(226,163,62,0) 64%)}
+  .amb .grain{position:absolute;inset:0;display:block;opacity:.028;
+    background-repeat:repeat;background-size:160px 160px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23g)'/%3E%3C/svg%3E")}
+
+  /* specular edges. Below 700px figure.arch and .tbl-wrap use ::before for
+     the "swipe" hint, so the edge only lights from 701px up. */
+  .frame,.cite-box{position:relative}
+  .frame::before,.cite-box::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;
+    pointer-events:none;
+    background:linear-gradient(90deg,rgba(237,235,230,0) 0%,rgba(237,235,230,.26) 16%,
+      rgba(237,235,230,.09) 52%,rgba(237,235,230,0) 92%)}
+  @media(min-width:701px){
+    figure.arch,.tbl-wrap{position:relative}
+    figure.arch::before,.tbl-wrap::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;
+      pointer-events:none;
+      background:linear-gradient(90deg,rgba(237,235,230,0) 0%,rgba(237,235,230,.24) 16%,
+        rgba(237,235,230,.08) 52%,rgba(237,235,230,0) 92%)}
+  }
+
+  /* torch: the cursor lights the schematic it is over */
+  @media(hover:hover) and (pointer:fine){
+    html.js figure.arch,html.js .cite-box{position:relative;isolation:isolate;--mx:50%;--my:50%}
+    html.js figure.arch::after,html.js .cite-box::after{
+      content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:0;
+      transition:opacity var(--t2,280ms) var(--e-io,cubic-bezier(.65,0,.35,1));
+      background:radial-gradient(220px 220px at var(--mx) var(--my),
+        rgba(226,163,62,.10) 0%,rgba(226,163,62,.03) 45%,rgba(226,163,62,0) 72%)}
+    html.js figure.arch:hover::after,html.js .cite-box:hover::after{opacity:1}
+    @supports ((mask-image:radial-gradient(#000,transparent)) or (-webkit-mask-image:radial-gradient(#000,transparent))){
+      html.js figure.arch::after,html.js .cite-box::after{
+        background:
+          linear-gradient(to right,rgba(226,163,62,.15) 0 1px,rgba(0,0,0,0) 1px 100%) 0 0/22px 22px,
+          linear-gradient(to bottom,rgba(226,163,62,.15) 0 1px,rgba(0,0,0,0) 1px 100%) 0 0/22px 22px,
+          radial-gradient(220px 220px at var(--mx) var(--my),
+            rgba(226,163,62,.11) 0%,rgba(226,163,62,.03) 48%,rgba(226,163,62,0) 74%);
+        -webkit-mask-image:radial-gradient(200px 200px at var(--mx) var(--my),
+          #000 0%,rgba(0,0,0,.4) 46%,rgba(0,0,0,0) 70%);
+        mask-image:radial-gradient(200px 200px at var(--mx) var(--my),
+          #000 0%,rgba(0,0,0,.4) 46%,rgba(0,0,0,0) 70%)}
+    }
+  }
+
+  @media(prefers-reduced-motion:reduce){
+    figure.arch::after,.cite-box::after{display:none}
+  }
+  @media print{
+    .amb{display:none!important}
+    .frame::before,.cite-box::before,figure.arch::before,.tbl-wrap::before,
+    figure.arch::after,.cite-box::after{display:none!important}
+  }
+</style>
+<script>document.documentElement.className+=' js';</script>
+</head>
+<body>
+<div class="amb" aria-hidden="true"><span class="grain"></span></div>
+<a class="skip" href="#main">Skip to content</a>
+
+<nav>
+  <div class="wrap nav-in">
+    <a class="mark" href="index.html">Chandra Kiran Teja</a>
+    <a class="back" href="index.html#work">← Back to selected work</a>
+  </div>
+</nav>
+
+<main id="main">
+<header>
+  <div class="wrap">
+    <div class="eyebrow fade" style="--d:40ms">Case study · Frame 04.3</div>
+    <h1 class="fade" style="--d:110ms">A detector that had to live on 4 GB and a fence post.</h1>
+    <p class="lede fade" style="--d:190ms">A 2022 personal project deploying a YOLOv5 wildlife detector to an Nvidia Jetson Nano: collecting the dataset that didn't exist, then making the model small enough to run where the animals actually are.</p>
+    <div class="meta fade" style="--d:260ms">
+      <div><span class="k">Role</span><span class="v">Solo, end to end</span></div>
+      <div><span class="k">Hardware</span><span class="v">Jetson Nano</span></div>
+      <div><span class="k">Classes</span><span class="v">15+ custom</span></div>
+      <div><span class="k">Result</span><span class="v">90% accuracy</span></div>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>The problem</h2>
+    <p>Animal intrusion onto farmland is a detection problem with an awkward constraint attached: the detection has to happen <strong>where there is no datacentre, and frequently no reliable network</strong>. Streaming video to a server for inference assumes bandwidth that a field boundary does not have, and adds latency to an alert whose entire value is being early.</p>
+    <p>So the model has to run on the device. That turns a straightforward computer vision task into a systems problem. The Nano offers a modest GPU and a shared memory budget, and every architectural choice is spent against it.</p>
+    <h3>And the data didn't exist</h3>
+    <p>General-purpose detection datasets contain a handful of animal categories, framed as photography: well-lit, centred, taken by someone who intended to photograph the animal. Surveillance footage is none of those things: it is off-angle, motion-blurred, badly lit, and the subject is often partially out of frame. A model trained on the former degrades sharply on the latter.</p>
+    <p>The dataset had to be <strong>collected and labelled from scratch, across 15+ classes</strong>, in conditions matching deployment.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>The approach</h2>
+    <h3>Model choice</h3>
+    <p><strong>YOLOv5</strong> was selected for a specific reason rather than familiarity: it is single-stage. Two-stage detectors propose regions and then classify them, which is accurate but spends inference budget twice. On constrained hardware, a single forward pass producing boxes and classes together is the difference between real-time and a slideshow. YOLOv5 also ships in several width and depth scales, which turns model size into a tunable dial rather than a fixed cost.</p>
+    <h3>Data pipeline</h3>
+    <p>Footage was captured in deployment-like conditions, then labelled across the target classes. Augmentation targeted the failure modes the environment actually produces (varied lighting, partial occlusion, scale variation as animals approach or retreat from the camera) rather than generic transforms.</p>
+    <h3>Deployment</h3>
+    <p>The trained model was then optimised for the Nano and run against a live camera feed on-device, so that a detection produces an alert locally without a round trip.</p>
+    <figure class="arch">
+      <svg viewBox="0 0 860 200" role="img" aria-label="Camera feed enters the Jetson Nano, is preprocessed, passes through the YOLOv5 detector, then postprocessing and non-maximum suppression, producing a local alert. Training and dataset collection happen off-device and produce the optimised model deployed to the Nano.">
+        <rect class="ab" x="8" y="72" width="92" height="46" rx="2"></rect>
+        <text class="at" x="24" y="93">Camera</text>
+        <text class="at-s" x="24" y="108">LIVE FEED</text>
+        <path class="aln" d="M100 95 H136"></path>
+
+        <rect class="ab-hi" x="136" y="34" width="480" height="124" rx="2"></rect>
+        <text class="at-a" x="152" y="54">NVIDIA JETSON NANO · ON-DEVICE</text>
+
+        <rect class="ab" x="156" y="72" width="104" height="46" rx="2"></rect>
+        <text class="at" x="172" y="93">Preprocess</text>
+        <text class="at-s" x="172" y="108">RESIZE · NORM</text>
+        <path class="aln" d="M260 95 H296"></path>
+
+        <rect class="ab" x="296" y="66" width="128" height="58" rx="2"></rect>
+        <text class="at" x="312" y="88">YOLOv5</text>
+        <text class="at-s" x="312" y="104">SINGLE-STAGE</text>
+        <text class="at-s" x="312" y="118">OPTIMISED</text>
+        <path class="aln" d="M424 95 H460"></path>
+
+        <rect class="ab" x="460" y="72" width="136" height="46" rx="2"></rect>
+        <text class="at" x="476" y="93">Postprocess</text>
+        <text class="at-s" x="476" y="108">NMS · THRESHOLD</text>
+
+        <path class="aln-a" d="M616 95 H656"></path>
+        <rect class="ab" x="656" y="72" width="96" height="46" rx="2"></rect>
+        <text class="at" x="672" y="93">Alert</text>
+        <text class="at-a" x="672" y="108">LOCAL</text>
+
+        <rect class="ab" x="156" y="166" width="200" height="30" rx="2"></rect>
+        <text class="at-s" x="172" y="185">CUSTOM DATASET · 15+ CLASSES</text>
+        <path class="aln" stroke-dasharray="3 4" d="M256 166 V140 M256 140 H360 M360 140 V124"></path>
+        <text class="at-s" x="376" y="188">TRAINED OFF-DEVICE, DEPLOYED ON</text>
+      </svg>
+      <figcaption>Detection runs entirely on the device, with no network round trip between camera and alert</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Results</h2>
+    <p>The deployed system reached <strong>90% accuracy across 15+ classes</strong> on the custom dataset, running on-device.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Property</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td class="n">Detector</td><td>YOLOv5, single-stage</td></tr>
+          <tr><td class="n">Target hardware</td><td>Nvidia Jetson Nano</td></tr>
+          <tr><td class="n">Classes</td><td class="m">15+</td></tr>
+          <tr><td class="n">Dataset</td><td>Custom, collected and labelled for deployment conditions</td></tr>
+          <tr><td class="n">Accuracy</td><td class="m">90%</td></tr>
+          <tr><td class="n">Inference location</td><td>On-device, no network dependency</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>What edge deployment actually costs you</h2>
+    <ul class="pts">
+      <li><strong>Accuracy is traded, not preserved.</strong> Shrinking a model to fit a memory budget costs recall on small and distant objects first, which are exactly the early detections an alerting system most wants.</li>
+      <li><strong>Memory is shared.</strong> The Nano's CPU and GPU draw on the same pool, so the camera pipeline, preprocessing and the model compete rather than scale independently.</li>
+      <li><strong>Thermal and power limits are real.</strong> Sustained inference outdoors is a different workload from a benchmark run, and throttling shows up as dropped frames rather than an error.</li>
+      <li><strong>A custom dataset is a maintenance commitment.</strong> Every new species, camera angle or season is a labelling round, and the model quietly degrades until it happens.</li>
+      <li><strong>Threshold choice is a product decision.</strong> A false negative is a missed intrusion; a false positive is an alert nobody trusts by week three. Where that line sits isn't a modelling question.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────────────────────
+     CHANDRA: fill these in. This is the material interviewers dig
+     into, and only you have it. Uncomment once written.
+       • measured FPS on the Nano, and the input resolution
+       • inference latency per frame, and model size after optimisation
+       • which YOLOv5 scale you used (n / s / m) and why
+       • whether you used TensorRT / FP16 quantisation, and what it bought
+       • the confusion pairs: which classes did it mix up?
+       • what failed in the field that never failed in testing
+     Delete this comment block once written.
+
+<section>
+  <div class="wrap">
+    <h2>Measured performance on device</h2>
+    <p>…</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>What failed in the field</h2>
+    <p>…</p>
+  </div>
+</section>
+────────────────────────────────────────────────────────────── -->
+
+<section>
+  <div class="wrap">
+    <h2>Code</h2>
+    <p>Both repositories are public.</p>
+    <a class="btn" href="https://github.com/ckteja/Animal-Intrusion-Detection" target="_blank" rel="noopener">Detection repository →</a>
+    <a class="btn" href="https://github.com/ckteja/Jetson_AIDsys" target="_blank" rel="noopener">Jetson deployment →</a>
+  </div>
+</section>
+
+</main>
+
+<div class="wrap pager">
+  <a href="few-shot-object-counter.html">← Previous case study: Few-shot object counter</a>
+  <a href="index.html#work">All work →</a>
+</div>
+
+<div class="wrap"><footer>
+  <span>© 2026 Chandra Kiran Teja</span>
+  <span>
+    <a href="https://www.linkedin.com/in/chandrakiranteja/" target="_blank" rel="noopener">LinkedIn</a> ·
+    <a href="https://github.com/ckteja" target="_blank" rel="noopener">GitHub</a> ·
+    <a href="mailto:chandrakiranteja@gmail.com">Email</a>
+  </span>
+</footer></div>
+
+<script>
+(function(){function s(){document.documentElement.classList.add('ready');}
+if(document.readyState==='complete')requestAnimationFrame(s);
+else window.addEventListener('load',function(){requestAnimationFrame(s);});
+setTimeout(s,1200);})();
+</script>
+<script>
+/* ---- architecture diagrams draw themselves once, left to right, on first view ---- */
+(function(){
+  var svgs=[].slice.call(document.querySelectorAll('figure.arch svg'));
+  if(!svgs.length) return;
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* if we cannot animate safely, leave the finished diagram exactly as it is */
+  if(reduce||!('IntersectionObserver' in window)) return;
+
+  var E_IO='cubic-bezier(.65,0,.35,1)', E_OUT='cubic-bezier(.16,1,.3,1)', SPAN=820;
+
+  function prep(svg){
+    var vb=(svg.getAttribute('viewBox')||'').split(/[\s,]+/).map(Number);
+    var W=vb[2]>0?vb[2]:880, parts=[];
+    [].slice.call(svg.querySelectorAll('rect,text,path,line,circle,polygon')).forEach(function(el){
+      var bb; try{ bb=el.getBBox(); }catch(e){ return; }
+      /* a path that already carries a dash pattern would lose it if we drew it */
+      var drawable=(el.tagName==='path'||el.tagName==='line')&&!el.hasAttribute('stroke-dasharray');
+      var len=0;
+      if(drawable&&el.getTotalLength){ try{ len=el.getTotalLength(); }catch(e){ len=0; } }
+      var d=Math.round((Math.max(0,bb.x)/W)*SPAN);
+      if(len>0){
+        el.style.strokeDasharray=len+'px';
+        el.style.strokeDashoffset=len+'px';
+        el.style.transition='stroke-dashoffset 420ms '+E_IO+' '+d+'ms';
+        parts.push({el:el,draw:true});
+      }else{
+        el.style.opacity='0';
+        el.style.transition='opacity 380ms '+E_OUT+' '+(d+90)+'ms';
+        parts.push({el:el,draw:false});
+      }
+    });
+    svg.__play=function(){
+      parts.forEach(function(p){
+        if(p.draw) p.el.style.strokeDashoffset='0px';
+        else p.el.style.opacity='1';
+      });
+    };
+  }
+
+  var io=new IntersectionObserver(function(en){
+    en.forEach(function(e){
+      if(!e.isIntersecting) return;
+      io.unobserve(e.target);
+      if(e.target.__play) e.target.__play();
+    });
+  },{threshold:.15});
+
+  svgs.forEach(function(s){ prep(s); io.observe(s); });
+})();
+</script>
+<script>
+/* ---- analytics: cookieless, no personal data, no consent banner needed ----
+   Set CODE to your GoatCounter code and nothing else needs changing. While it
+   is empty this script loads nothing and makes no network request at all. */
+(function(){
+  var CODE = 'ckteja';   /* e.g. 'ckteja' for https://ckteja.goatcounter.com */
+  if(!CODE) return;
+
+  var s=document.createElement('script');
+  s.async=true;
+  s.src='https://gc.zgo.at/count.js';
+  s.setAttribute('data-goatcounter','https://'+CODE+'.goatcounter.com/count');
+  document.body.appendChild(s);
+
+  function ev(path,title){
+    if(window.goatcounter&&window.goatcounter.count)
+      window.goatcounter.count({path:path,title:title,event:true});
+  }
+  /* the three signals worth knowing about on a portfolio: did they take the CV,
+     did they actually run the demo, and where did they go next */
+  document.addEventListener('click',function(e){
+    var el=e.target&&e.target.closest?e.target.closest('a[href],button'):null;
+    if(!el) return;
+    if(el.id==='dmRun'||el.id==='dmCam'||el.id==='dmPick') return ev('demo-run','Live demo used');
+    var href=el.getAttribute('href')||'';
+    if(/\.pdf($|\?|#)/i.test(href)) return ev('cv-download','CV download');
+    if(/^https?:\/\//i.test(href)){
+      try{
+        var h=new URL(href,location.href).hostname.replace(/^www\./,'');
+        if(h!==location.hostname) ev('out-'+h,'Outbound: '+h);
+      }catch(err){}
+    }
+  },true);
+})();
+</script>
+<script>
+/* ---- torch: the cursor lights the schematic it is over ---- */
+(function(){
+  if(!window.matchMedia) return;
+  if(!matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var cards=[].slice.call(document.querySelectorAll('figure.arch,.cite-box'));
+  if(!cards.length) return;
+  var want=null,raf=null;
+  function paint(){
+    raf=null;
+    if(!want) return;
+    want.el.style.setProperty('--mx',want.x+'px');
+    want.el.style.setProperty('--my',want.y+'px');
+    want=null;
+  }
+  cards.forEach(function(el){
+    el.addEventListener('pointermove',function(e){
+      if(e.pointerType&&e.pointerType!=='mouse') return;
+      var r=el.getBoundingClientRect();
+      want={el:el,x:Math.round(e.clientX-r.left),y:Math.round(e.clientY-r.top)};
+      if(!raf) raf=requestAnimationFrame(paint);
+    },{passive:true});
+  });
+})();
+</script>
+</body>
+</html>
