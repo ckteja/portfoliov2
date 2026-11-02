@@ -47,7 +47,33 @@ how loudly the page speaks.
   hold the same weight as a group backed by three IEEE papers.
 
 Mint (`--box`) means one thing throughout: this points at real work. It frames
-the project cards and underlines the skill citations, and nothing else uses it.
+the project cards, underlines the skill citations and frames the case-study
+`.meta` block, and nothing else uses it.
+
+### The case-study pages
+
+`densenet-transformer.html`, `edge-detection.html`, `few-shot-object-counter.html`
+and `404.html` are on the same system: new `--ground`, the display headline scale
+(h1 to `clamp(2.4rem, 6.4vw, 4.4rem)` at `0.94`), and the `--box` tokens.
+
+Each case study's `.meta` block is framed as a detection and carries **the same
+class label as the card that links to it** — click `RESEARCH · 0.9375 UCF-101`
+on the index and the page you land on repeats it, so the card and the page read
+as one object.
+
+They stay on the dark ground rather than taking the lit key. They are full of
+architecture diagrams, figures and measurement tables, which read better there,
+and keeping them dark makes them continuous with the Work section they open from.
+
+Two fixes went in alongside:
+
+- `.at` / `.at-s` / `.at-a` set the SVG diagram text with hardcoded light hex
+  (`#EDEBE6`, `#A49F94`). They now take `--ink` / `--muted` / `--sig`. Nothing
+  rendered wrongly before, but any non-dark ground would have made every
+  architecture diagram vanish.
+- The "Animal intrusion detection on edge hardware" card linked only to GitHub,
+  even though `edge-detection.html` is that project's case study. It now links
+  to both.
 - **One orchestrated opening.** The headline wipes up from a mask on load, as a
   pure CSS animation so it can never be left invisible by a script failure, and
   the eyebrow resolves out of noise once. Everything below keeps the existing
