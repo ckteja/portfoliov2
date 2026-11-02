@@ -38,6 +38,16 @@ how loudly the page speaks.
   them. Labels encode the kind of work: `FULL-STACK`, `RESEARCH`, `EDGE-DEPLOY`.
 - **i-Brick instrument.** The venture's 0–100 risk score as a dial, including the
   dashed `UNASSESSED` chip — the system's own refusal to report unmeasured as fine.
+
+- **Skills as claim and citation.** Each group already named the work it came
+  from, in links, set in the smallest and dimmest type on the page. Those cite
+  lines are now marked as citations (a `USED IN` rule, links underlined in
+  `--box`), and the two groups with nothing to cite — languages, tools — drop
+  out of the grid into a compact row, because "Python, C, C++, SQL" should not
+  hold the same weight as a group backed by three IEEE papers.
+
+Mint (`--box`) means one thing throughout: this points at real work. It frames
+the project cards and underlines the skill citations, and nothing else uses it.
 - **One orchestrated opening.** The headline wipes up from a mask on load, as a
   pure CSS animation so it can never be left invisible by a script failure, and
   the eyebrow resolves out of noise once. Everything below keeps the existing
