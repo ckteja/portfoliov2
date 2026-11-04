@@ -87,6 +87,31 @@ portrait are drawn by hand. These aren't." Collapsing the two would cost that.
 Typeface is still self-hosted Newsreader. Fraunces was considered for the display
 role and is a drop-in swap (`--f-display`) if more character is wanted later.
 
+## The link preview card
+
+`og-card.png` (1200×630) is what renders when the site is pasted into
+LinkedIn, Slack, WhatsApp or a message. It replaces a GitHub avatar that was
+both a third-party request on an otherwise fully self-hosted site, and a small
+round portrait where a card should be. Nothing on the site now reaches
+`avatars.githubusercontent.com`.
+
+`twitter:card` also moved from `summary` to `summary_large_image`. Without
+that, a 1200×630 image still renders as the small square preview.
+
+The card is built from `build/og-card.html` using the site's own self-hosted
+fonts, so it is set in the same type as the page it points at. To regenerate
+after changing the headline or the figures:
+
+```
+chrome --headless --disable-gpu --force-device-scale-factor=1 \
+       --screenshot=og-card.png --window-size=1200,630 build/og-card.html
+```
+
+The `og:image` URL must be absolute — most scrapers will not resolve a
+relative one. It currently tracks `<link rel="canonical">` at
+`https://ckteja.github.io/Portfolio`; **if the site deploys anywhere else,
+both have to change together.**
+
 ## Local preview
 
 Open `index.html` directly, or serve it so the scripts run:

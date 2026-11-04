@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OG card source</title>
+<!--
+  Source for og-card.png, the link preview image. Rendered to an exact
+  1200x630 PNG with:
+
+    chrome --headless --disable-gpu --screenshot=og-card.png \
+           --window-size=1200,630 --default-background-color=0 \
+           build/og-card.html
+
+  Text only, no portrait: a preview card is shown at roughly 500px wide
+  in most feeds, so the headline and the three figures need the room.
+  Uses the site's own self-hosted fonts, so the card and the page it
+  points at are set in the same type.
+-->
+<style>
+  @font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;
+    src:url(../fonts/ibm-plex-mono-400-latin.woff2) format('woff2')}
+  @font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;
+    src:url(../fonts/ibm-plex-mono-500-latin.woff2) format('woff2')}
+  @font-face{font-family:'Newsreader';font-style:normal;font-weight:400 600;
+    src:url(../fonts/newsreader-latin.woff2) format('woff2')}
+
+  :root{
+    --ground:#0A0B0E;
+    --ink:#EDEBE6;
+    --body:#B8B6AF;
+    --dim:#938B7C;
+    --sig:#E2A33E;
+    --box:#34E5B0;
+    --line:#272B33;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1200px;height:630px;overflow:hidden}
+  body{
+    background:var(--ground);
+    font-family:'IBM Plex Mono',monospace;
+    -webkit-font-smoothing:antialiased;
+    position:relative;
+  }
+  /* the site's ambient wash, so the card feels lit the same way */
+  .wash{position:absolute;inset:0;
+    background:
+      radial-gradient(760px 420px at 76% 14%, rgba(226,163,62,.085), rgba(226,163,62,0) 68%),
+      radial-gradient(520px 320px at 8% 92%, rgba(52,229,176,.05), rgba(52,229,176,0) 70%)}
+
+  /* detection frame: the page's own device, wrapped around the card */
+  .tick{position:absolute;width:30px;height:30px;border:2.5px solid var(--box)}
+  .tl{top:34px;left:34px;border-right:0;border-bottom:0}
+  .tr{top:34px;right:34px;border-left:0;border-bottom:0}
+  .bl{bottom:34px;left:34px;border-right:0;border-top:0}
+  .br{bottom:34px;right:34px;border-left:0;border-top:0}
+
+  .card{position:relative;height:100%;padding:74px 82px;
+    display:flex;flex-direction:column;justify-content:space-between}
+
+  .eyebrow{display:flex;align-items:center;gap:14px;
+    font-size:19px;font-weight:500;letter-spacing:.16em;text-transform:uppercase}
+  .eyebrow .name{color:var(--ink)}
+  .eyebrow .sep{color:var(--line)}
+  .eyebrow .role{color:var(--sig)}
+
+  h1{font-family:'Newsreader',Georgia,serif;font-weight:500;
+    font-size:94px;line-height:.93;letter-spacing:-.03em;color:var(--ink);
+    max-width:18ch}
+  h1 em{font-style:italic;color:var(--sig)}
+
+  .proof{display:flex;gap:58px;padding-top:30px;border-top:1px solid var(--line)}
+  .proof li{list-style:none}
+  .proof b{display:block;font-family:'Newsreader',Georgia,serif;font-weight:500;
+    font-size:60px;line-height:1;letter-spacing:-.02em;color:var(--ink);
+    font-variant-numeric:tabular-nums}
+  .proof b i{font-style:normal;color:var(--sig)}
+  .proof span{display:block;margin-top:12px;font-size:15px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--dim);line-height:1.5}
+</style>
+</head>
+<body>
+  <div class="wash"></div>
+  <i class="tick tl"></i><i class="tick tr"></i><i class="tick bl"></i><i class="tick br"></i>
+
+  <div class="card">
+    <div class="eyebrow">
+      <span class="name">Chandra Kiran Teja</span>
+      <span class="sep">/</span>
+      <span class="role">AI / ML Engineer</span>
+    </div>
+
+    <h1>Published research.<br>Deployed <em>on-device.</em></h1>
+
+    <ul class="proof">
+      <li><b>3<i>&times;</i></b><span>IEEE publications</span></li>
+      <li><b>90<i>%</i></b><span>Custom set, Jetson Nano</span></li>
+      <li><b>M.Sc.</b><span>AI &middot; Universit&auml;t Passau</span></li>
+    </ul>
+  </div>
+</body>
+</html>
