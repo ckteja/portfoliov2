@@ -5,7 +5,7 @@ Personal portfolio site: computer vision, deep learning, and real-time video und
 Single-page, self-contained (`index.html`), no build step and no dependencies.
 Fonts are self-hosted, so no visitor IP reaches a third party.
 
-**v1 (currently live):** https://ckteja.github.io/Portfolio/ — source in `../website`, untouched.
+**v1 (currently live):** https://ckteja.github.io/Portfoliov2/ — source in `../website`, untouched.
 
 ## What changed in v2
 
