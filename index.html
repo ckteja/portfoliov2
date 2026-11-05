@@ -205,7 +205,16 @@
   /* frame-numbered sections */
   section{border-bottom:1px solid var(--line)}
   .sec{display:grid;grid-template-columns:150px minmax(0,var(--measure));gap:2.5rem;
-       padding-top:var(--pad,48px);padding-bottom:var(--pad,48px)}
+       padding-top:var(--pad,48px);padding-bottom:var(--pad,48px);position:relative}
+  .sec::after{content:"";position:absolute;left:0;right:0;top:0;height:1px;
+    background:linear-gradient(90deg,transparent 0%,var(--sig) 22%,transparent 78%);
+    transform:scaleX(0);transform-origin:left center;opacity:0}
+  section.current .sec::after{opacity:.7;animation:frameScan 900ms var(--e-out) both}
+  @keyframes frameScan{0%{transform:scaleX(0);filter:brightness(1)}
+    45%{transform:scaleX(1);filter:brightness(1.7)}100%{transform:scaleX(1);filter:brightness(1)}}
+  section.current .marker .fnum{color:var(--ink)}
+  .marker .tick{transform-origin:left center;transition:transform var(--motion-base) var(--e-out),background var(--motion-base) var(--e-io)}
+  section.current .marker .tick{transform:scaleX(1.7);background:var(--sig)}
   .marker{position:sticky;top:104px}
   .marker .fnum{font-family:var(--f-mono);font-size:.7rem;color:var(--sig);letter-spacing:.1em;display:block}
   .marker .fname{font-family:var(--f-mono);font-size:.73rem;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);display:block;margin-top:.45rem}
@@ -326,6 +335,32 @@
   .cell:hover{border-color:var(--sig);color:var(--ink)}
   .cell.on{border-color:var(--sig);color:var(--sig)}
   .cell.on .n{color:var(--sig)}
+
+  /* scroll HUD: the page reads like a live inference reel, not a document */
+  .scroll-hud{position:fixed;right:22px;top:50%;z-index:55;width:124px;
+    transform:translateY(-50%);pointer-events:none;display:flex;align-items:center;gap:.7rem;
+    font-family:var(--f-mono);font-size:.61rem;letter-spacing:.08em;text-transform:uppercase;
+    color:#A49F94;background:rgba(12,13,15,.9);border:1px solid #373C46;
+    padding:.55rem .6rem;opacity:.92}
+  .scroll-hud::before{content:"";position:absolute;right:100%;top:50%;width:30px;height:1px;
+    background:linear-gradient(90deg,transparent,var(--sig));opacity:.5}
+  .hud-rail{position:relative;width:2px;height:116px;background:var(--line-2);overflow:hidden}
+  .hud-rail i{display:block;width:100%;height:100%;background:var(--sig);
+    transform-origin:top;transform:scaleY(0);transition:transform var(--motion-fast) linear}
+  .hud-copy{display:grid;gap:.35rem;min-width:0}
+  .hud-k{color:var(--sig);font-size:.57rem}
+  .hud-frame{color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:92px}
+  .hud-frac{color:var(--dim);font-variant-numeric:tabular-nums}
+  @media(max-width:1340px){.scroll-hud{right:12px;width:104px}}
+  @media(max-width:880px){
+    .scroll-hud{top:84px;right:18px;transform:none;width:auto;gap:.45rem;opacity:.72}
+    .scroll-hud::before{display:none}
+    .hud-rail{width:70px;height:2px}
+    .hud-rail i{width:100%;height:100%;transform-origin:left center;transform:scaleX(0)}
+    .hud-copy{display:flex;align-items:baseline;gap:.45rem}
+    .hud-k{display:none}
+    .hud-frame{max-width:90px}
+  }
 
 
   /* track-id marker */
@@ -659,11 +694,14 @@
     figure.arch::after{display:none}
     .scrub,.scrub-tip{transition:none}
     .scrub-tip{display:none}
+    .sec::after{animation:none!important;opacity:0}
+    .scroll-hud .hud-rail i{transition:none}
   }
   html.reduce-motion{scroll-behavior:auto}
   html.reduce-motion .amb i,
   html.reduce-motion .scrub-tip,
   html.reduce-motion .track{transition:none}
+  html.reduce-motion .sec::after{animation:none!important;opacity:0}
   html.reduce-motion .bx{stroke-dashoffset:0;animation:none}
   html.reduce-motion .tag{opacity:1;animation:none}
   html.reduce-motion .reveal>*,
@@ -867,6 +905,10 @@
 <div class="scrub-tip" id="scrubTip" aria-hidden="true"><b id="stipTc">00:00:00:00</b><span id="stipSec">Top</span></div>
 
 <div class="track" id="track" aria-hidden="true"><div class="box"></div><span id="trackLbl">TRACK 01 · DEMO</span></div>
+<div class="scroll-hud" id="scrollHud" aria-hidden="true">
+  <div class="hud-rail"><i id="hudProgress"></i></div>
+  <div class="hud-copy"><span class="hud-k">live frame</span><span class="hud-frame" id="hudFrame">TOP / MASTHEAD</span><span class="hud-frac" id="hudFrac">00%</span></div>
+</div>
 
 <div class="pal" id="pal" role="dialog" aria-modal="true" aria-label="Command palette">
   <div class="pal-box">
@@ -2093,7 +2135,51 @@
   }
 })();
 </script>
+<script>
+/* ---- scroll inference HUD -------------------------------------------
+   The current frame is the section nearest the viewport centre. This is
+   deliberately separate from the scrubber: the scrubber answers "where",
+   while this answers "what is happening here". */
+(function(){
+  var root=document.documentElement;
+  var sections=[].slice.call(document.querySelectorAll('main > section[id]'));
+  var rail=document.getElementById('hudProgress');
+  var frame=document.getElementById('hudFrame');
+  var frac=document.getElementById('hudFrac');
+  if(!sections.length||!rail||!frame||!frac) return;
+  var raf=0, active=-1;
 
+  function paint(){
+    raf=0;
+    var max=Math.max(1,document.documentElement.scrollHeight-window.innerHeight);
+    var amount=Math.max(0,Math.min(1,window.scrollY/max));
+    var center=window.scrollY+window.innerHeight*.46, next=0, best=Infinity;
+    sections.forEach(function(section,i){
+      var d=Math.abs(section.offsetTop+section.offsetHeight*.28-center);
+      if(d<best){best=d;next=i;}
+    });
+    if(window.scrollY<sections[0].offsetTop-window.innerHeight*.2) next=-1;
+    if(next!==active){
+      if(active>=0) sections[active].classList.remove('current');
+      active=next;
+      if(active>=0){
+        sections[active].classList.remove('current');
+        void sections[active].offsetWidth;
+        sections[active].classList.add('current');
+        frame.textContent='FRAME '+String(active+1).padStart(2,'0')+' / '+sections[active].id;
+      }else frame.textContent='TOP / MASTHEAD';
+    }
+    rail.style.transform=(window.innerWidth<=880?'scaleX(':'scaleY(')+amount+')';
+    frac.textContent=String(Math.round(amount*100)).padStart(2,'0')+'%';
+  }
+  function schedule(){if(!raf) raf=requestAnimationFrame(paint);}
+  window.addEventListener('scroll',schedule,{passive:true});
+  window.addEventListener('resize',schedule);
+  window.addEventListener('load',schedule);
+  schedule();
+  if(root.classList.contains('reduce-motion')) sections.forEach(function(s){s.classList.remove('current');});
+})();
+</script>
 <script>
 /* The masthead eyebrow resolves out of noise once, on load: a label
    settling the way a readout settles. The real text is already in the
