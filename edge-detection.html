@@ -43,7 +43,9 @@
     --box:#34E5B0;--box-line:rgba(52,229,176,.34);--box-wash:rgba(52,229,176,.04);
     --e-out:cubic-bezier(.16,1,.3,1);
     --e-io:cubic-bezier(.65,0,.35,1);
-    --t1:140ms; --t2:280ms;
+    --motion-instant:100ms; --motion-fast:140ms; --motion-base:280ms;
+    --motion-slow:480ms; --motion-focus:680ms;
+    --t1:var(--motion-fast); --t2:var(--motion-base);
     --maxw:900px;
     --f-display:"Newsreader",Georgia,serif;
     --f-body:"IBM Plex Sans",system-ui,sans-serif;
@@ -65,7 +67,7 @@
       border-bottom:1px solid var(--line)}
   .nav-in{display:flex;align-items:center;justify-content:space-between;height:64px;gap:1rem}
   .mark{font-family:var(--f-display);font-size:1.04rem;font-weight:600;color:var(--ink)}
-  .back{font-family:var(--f-mono);font-size:.75rem;color:var(--muted);transition:color .18s}
+  .back{font-family:var(--f-mono);font-size:.75rem;color:var(--muted);transition:color var(--motion-fast) var(--e-io)}
   .back:hover{color:var(--sig)}
 
   header{padding:64px 0 44px;border-bottom:1px solid var(--line)}
@@ -129,11 +131,11 @@
 
   .btn{display:inline-block;font-family:var(--f-mono);font-size:.77rem;padding:.62rem 1.05rem;
        border-radius:2px;border:1px solid var(--line-2);color:var(--ink);background:transparent;
-       cursor:pointer;transition:border-color .18s,color .18s;margin-right:.5rem;margin-top:.5rem}
+       cursor:pointer;transition:border-color var(--motion-fast) var(--e-io),color var(--motion-fast) var(--e-io);margin-right:.5rem;margin-top:.5rem}
   .btn:hover{border-color:var(--sig);color:var(--sig)}
 
   .pager{display:flex;justify-content:space-between;gap:1rem;padding:34px 0;flex-wrap:wrap}
-  .pager a{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);transition:color .18s}
+  .pager a{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);transition:color var(--motion-fast) var(--e-io)}
   .pager a:hover{color:var(--sig)}
   footer{padding:2.2rem 0 3rem;color:var(--dim);font-family:var(--f-mono);font-size:.73rem;
          display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
@@ -179,6 +181,10 @@
     html.js .fade{opacity:1!important;transform:none!important;transition:none!important}
     ul.pts li:hover,.btn:active{transform:none}
   }
+  html.reduce-motion{scroll-behavior:auto}
+  html.reduce-motion .fade,
+  html.reduce-motion .fade *,
+  html.reduce-motion .pts li{opacity:1!important;transform:none!important;transition:none!important}
   .skip{position:fixed;left:8px;top:-64px;z-index:100;background:var(--sig);color:var(--ground);
         font-family:var(--f-mono);font-size:.78rem;padding:.62rem 1rem;border-radius:2px;transition:top .18s}
   .skip:focus{top:8px}
@@ -250,7 +256,17 @@
     figure.arch::after,.cite-box::after{display:none!important}
   }
 </style>
-<script>document.documentElement.className+=' js';</script>
+<script>
+  document.documentElement.className+=' js';
+  (function(){
+    var root=document.documentElement;
+    var mq=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)');
+    function sync(){root.classList.toggle('reduce-motion',!!(mq&&mq.matches));}
+    sync();
+    if(mq&&mq.addEventListener) mq.addEventListener('change',sync);
+    else if(mq&&mq.addListener) mq.addListener(sync);
+  })();
+</script>
 </head>
 <body>
 <div class="amb" aria-hidden="true"><span class="grain"></span></div>

@@ -76,7 +76,12 @@
     --box-wash:rgba(52,229,176,.04);
     --e-out:cubic-bezier(.16,1,.3,1);
     --e-io:cubic-bezier(.65,0,.35,1);
-    --t1:140ms; --t2:280ms; --t3:480ms;
+    --motion-instant:100ms;
+    --motion-fast:140ms;
+    --motion-base:280ms;
+    --motion-slow:480ms;
+    --motion-focus:680ms;
+    --t1:var(--motion-fast); --t2:var(--motion-base); --t3:var(--motion-slow);
     --maxw:1080px;
     --measure:700px;
     --f-display:"Newsreader",Georgia,serif;
@@ -102,7 +107,7 @@
 
   /* playhead scrubber */
   body{padding-bottom:58px}
-  .scrub{position:fixed;top:0;left:0;right:0;height:2px;background:var(--line);z-index:80}
+  .scrub{position:fixed;top:0;left:0;right:0;height:2px;background:var(--line);z-index:80;transform-origin:top;transition:transform var(--motion-fast) var(--e-io)}
   .scrub i{display:block;height:100%;width:0;background:var(--sig)}
 
   /* nav */
@@ -110,10 +115,10 @@
   .nav-in{display:flex;align-items:center;justify-content:space-between;height:68px;gap:1.5rem}
   .mark{font-family:var(--f-display);font-size:1.08rem;font-weight:600;color:var(--ink)}
   .nav-links{display:flex;gap:1.45rem}
-  .nav-links a{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);letter-spacing:.04em;transition:color .18s}
+  .nav-links a{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);letter-spacing:.04em;transition:color var(--motion-fast) var(--e-io)}
   .nav-links a:hover{color:var(--sig)}
   .nav-links a .n{color:var(--dim);margin-right:.4rem}
-  .nav-cv{font-family:var(--f-mono);font-size:.75rem;color:var(--ground);background:var(--sig);padding:.52rem .9rem;border-radius:2px;white-space:nowrap;transition:opacity .18s}
+  .nav-cv{font-family:var(--f-mono);font-size:.75rem;color:var(--ground);background:var(--sig);padding:.52rem .9rem;border-radius:2px;white-space:nowrap;transition:opacity var(--motion-fast) var(--e-io)}
   .nav-cv:hover{opacity:.85}
   @media(max-width:900px){.nav-links{display:none}}
 
@@ -127,6 +132,8 @@
   h1 em{font-style:italic;font-weight:500;color:var(--sig)}
   .standfirst{font-size:1.15rem;line-height:1.6;max-width:50ch;margin:0 0 1.7rem}
   .standfirst strong{color:var(--ink);font-weight:600}
+  .role-fit{font-family:var(--f-mono);font-size:.76rem;line-height:1.65;
+            letter-spacing:.03em;color:var(--sig);max-width:58ch;margin:-.7rem 0 1.65rem}
   .mast-note{font-size:.95rem;color:var(--muted);max-width:52ch;margin:0 0 1.9rem}
   .proof{display:grid;grid-template-columns:repeat(3,1fr);list-style:none;margin:0 0 1.5rem;padding:0}
   .proof li{display:flex;flex-direction:column;gap:.3rem;padding:0 1.25rem;border-left:1px solid var(--line-2)}
@@ -154,7 +161,7 @@
     .proof span{font-size:.72rem;line-height:1.45;letter-spacing:.06em;align-self:baseline}
   }
   .cta{display:flex;flex-wrap:wrap;gap:.65rem}
-  .btn{font-family:var(--f-mono);font-size:.79rem;padding:.7rem 1.12rem;border-radius:2px;border:1px solid var(--line-2);color:var(--ink);background:transparent;transition:border-color .18s,color .18s}
+  .btn{font-family:var(--f-mono);font-size:.79rem;padding:.7rem 1.12rem;border-radius:2px;border:1px solid var(--line-2);color:var(--ink);background:transparent;transition:border-color var(--motion-fast) var(--e-io),color var(--motion-fast) var(--e-io)}
   .btn:hover{border-color:var(--sig);color:var(--sig)}
   .btn.solid{background:var(--sig);color:var(--ground);border-color:var(--sig)}
   .btn.solid:hover{opacity:.85;color:var(--ground)}
@@ -305,7 +312,7 @@
   /* filmstrip scrubber */
   .strip{position:fixed;left:0;right:0;bottom:0;z-index:70;background:rgba(12,13,15,.94);
          backdrop-filter:blur(10px);border-top:1px solid var(--line);transform:translateY(101%);
-         transition:transform .3s ease}
+         transition:transform var(--motion-base) var(--e-out)}
   .strip.on{transform:none}
   .strip-in{max-width:var(--maxw);margin:0 auto;padding:.6rem 34px;display:flex;gap:.5rem;overflow-x:auto}
   .strip-tc{flex:0 0 auto;align-self:center;font-family:var(--f-mono);font-size:.68rem;color:var(--dim);
@@ -632,11 +639,11 @@
   .scrub-tip span{color:var(--muted);text-transform:uppercase}
 
   @media(hover:hover) and (pointer:fine){
-    html.js .scrub{cursor:ew-resize;transition:height var(--t1) var(--e-io)}
+    html.js .scrub{cursor:ew-resize}
     /* the grab strip reaches below the 2px bar without covering any nav
        control: the CV button's top edge sits at about 19px */
     html.js .scrub::after{content:"";position:absolute;left:0;right:0;top:0;height:16px}
-    html.js .scrub:hover,html.js .scrub.drag{height:6px}
+    html.js .scrub:hover,html.js .scrub.drag{transform:scaleY(3)}
     html.js .scrub:hover i,html.js .scrub.drag i{position:relative}
     html.js .scrub:hover i::after,html.js .scrub.drag i::after{
       content:"";position:absolute;right:-1px;top:-3px;width:2px;height:12px;background:var(--sig)}
@@ -653,6 +660,17 @@
     .scrub,.scrub-tip{transition:none}
     .scrub-tip{display:none}
   }
+  html.reduce-motion{scroll-behavior:auto}
+  html.reduce-motion .amb i,
+  html.reduce-motion .scrub-tip,
+  html.reduce-motion .track{transition:none}
+  html.reduce-motion .bx{stroke-dashoffset:0;animation:none}
+  html.reduce-motion .tag{opacity:1;animation:none}
+  html.reduce-motion .reveal>*,
+  html.reduce-motion .reveal ol.refs>li,
+  html.reduce-motion .reveal .skills>.skill,
+  html.reduce-motion .reveal .role,
+  html.reduce-motion .lift{opacity:1!important;transform:none!important;transition:none!important}
 
   /* ================================================================
      v2 — INFERENCE PASS
@@ -828,7 +846,17 @@
     figure.arch::before,figure.arch::after,.tbl-wrap::before,.cite-box::before{display:none!important}
   }
 </style>
-<script>document.documentElement.className+=' js';</script>
+<script>
+  document.documentElement.className+=' js';
+  (function(){
+    var root=document.documentElement;
+    var mq=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)');
+    function sync(){root.classList.toggle('reduce-motion',!!(mq&&mq.matches));}
+    sync();
+    if(mq&&mq.addEventListener) mq.addEventListener('change',sync);
+    else if(mq&&mq.addListener) mq.addListener(sync);
+  })();
+</script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -875,6 +903,7 @@
   <div class="wrap mast">
     <div>
       <p class="standfirst lift" style="--d:200ms">I build and deploy computer vision systems for <strong>action recognition, object detection, and multi-object tracking</strong>, with a focus on resource-constrained edge hardware.</p>
+      <p class="role-fit lift" style="--d:225ms">Seeking working-student, Master's thesis, and applied ML opportunities in Germany.</p>
       <ul class="proof lift" style="--d:255ms">
         <li><b>3<i>×</i></b><span>IEEE publications</span></li>
         <li><b>90<i>%</i></b><span>accuracy, custom set on Jetson Nano</span></li>
@@ -1789,6 +1818,7 @@
     var t0=Date.now(), last=0;
     function p(n){ return (n<10?'0':'')+n; }
     function tick(ts){
+      if(document.hidden){ requestAnimationFrame(tick); return; }
       if(ts-last>70){
         last=ts;
         var ms=Date.now()-t0, s=Math.floor(ms/1000);
